@@ -1,0 +1,75 @@
+name: GitHub Organization Member Contribution Report Action
+
+#description: An Action to generate a report of member contributions for a GitHub organization over a set time period.
+
+on:
+  workflow_dispatch:
+    inputs:
+      token:
+        description: A Personal Access Token with repo, read:org, and read:user scopes
+        required: true
+      org:
+        description: GitHub organization to retrieve data for
+        required: true
+      days:
+        description: Number of days in the past to collect data for
+        default: "30"
+        required: false
+      sort:
+        description: Column used for sorting report results
+        default: commitContrib
+        required: false
+      committer-name:
+        description: Name of the committer for Git history
+        default: github-actions
+        required: false
+      committer-email:
+        description: Email of the committer for Git history
+        default: github-actions@github.com
+        required: false
+      fromdate:
+        description: Start date for collecting data (YYYY-MM-DD)
+        required: false
+      todate:
+        description: End date for collecting data (YYYY-MM-DD)
+        required: false
+
+jobs:
+  generate-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate contribution report
+        env:
+          GITHUB_TOKEN: ${{ inputs.token }}
+          ORG: ${{ inputs.org }}
+          DAYS: ${{ inputs.days }}
+          FROM_DATE: ${{ inputs.fromdate }}
+          TO_DATE: ${{ inputs.todate }}
+          SORT: ${{ inputs.sort }}
+        run: |
+          node dist/index.js \
+            --token "$GITHUB_TOKEN" \
+            --org "$ORG" \
+            --days "$DAYS" \
+            --from "$FROM_DATE" \
+            --to "$TO_DATE" \
+            --sort "$SORT"
+
+      - name: Commit and push report
+        run: |
+          git config user.name "${{ inputs.committer-name }}"
+          git config user.email "${{ inputs.committer-email }}"
+          git add report.md
+          git commit -m "Update GitHub organization contribution report"
+          git push

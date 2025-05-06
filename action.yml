@@ -1,42 +1,69 @@
-name: GitHub Organization Member Contribution Report Action
-description: 'An Action to generate a report that contains member contribution data for a set interval belonging to a GitHub organization.'
+name: GitHub Organization Member Contribution Report
 
-inputs:
-  token:
-    description: 'A Personal Access token with repo, read:org and read:user scope'
-    required: true
-  org:
-    description: 'Custom GitHub organization to retrieve data for'
-    default: ''
-    required: false
-  days:
-    description: 'Amount of days in the past to collect data for'
-    default: '30'
-    required: false
-  sort:
-    description: 'Column used for sorting resport results'
-    # activeContrib, commitContrib, issueContrib, prContrib, prreviewContrib, repoIssueContrib, repoCommitContrib, repoPullRequestContrib, repoPullRequestReviewContrib
-    default: 'commitContrib'
-    required: false
-  committer-name:
-    description: 'The name of the committer that will appear in the Git history'
-    default: 'github-actions'
-    required: false
-  committer-email:
-    description: 'The committer email that will appear in the Git history'
-    default: 'github-actions@github.com'
-    required: false
-  fromdate:
-    description: 'The date from which to start collecting data'
-    required: false
-  todate:
-    description: 'The date to which to stop collecting data'
-    required: false
+on:
+  workflow_dispatch:
+    inputs:
+      token:
+        description: GitHub token with `read:org`, `repo`, and `read:user` scopes
+        required: true
+      org:
+        description: GitHub organization to generate report for
+        required: true
+      days:
+        description: Number of days in the past to gather data
+        default: "30"
+        required: false
+      sort:
+        description: Metric to sort by (e.g., commits, prs, issues)
+        default: commits
+        required: false
+      committer-name:
+        description: Name to use for Git commits
+        default: github-actions
+        required: false
+      committer-email:
+        description: Email to use for Git commits
+        default: github-actions@github.com
+        required: false
+      fromdate:
+        description: Start date (YYYY-MM-DD)
+        required: false
+      todate:
+        description: End date (YYYY-MM-DD)
+        required: false
 
-runs:
-  using: 'node12'
-  main: 'dist/index.js'
+jobs:
+  member-contributions:
+    runs-on: ubuntu-latest
 
-branding:
-  icon: 'list'
-  color: 'blue'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate contribution report
+        env:
+          GH_TOKEN: ${{ inputs.token }}
+        run: |
+          node dist/index.js \
+            --org "${{ inputs.org }}" \
+            --token "${{ inputs.token }}" \
+            --days "${{ inputs.days }}" \
+            --from "${{ inputs.fromdate }}" \
+            --to "${{ inputs.todate }}" \
+            --sort "${{ inputs.sort }}"
+
+      - name: Commit and push report
+        run: |
+          git config user.name "${{ inputs.committer-name }}"
+          git config user.email "${{ inputs.committer-email }}"
+          git add org-contribution-report.md
+          git commit -m "Update org member contribution report"
+          git push

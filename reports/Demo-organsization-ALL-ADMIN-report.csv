@@ -1,0 +1,25 @@
+Repository,Repo Visibility,Username,Full name,SSO email,Verified email,Public email,Repo permission,Organization role,Active contributions,Total contributions,User created,User updated,Organization
+Demo-repo22,PUBLIC,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
+artifactory-demo,PUBLIC,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
+demo-repo,PUBLIC,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
+github-org-member-contribution-action,PUBLIC,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
+hs,PRIVATE,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
+issue-repo,PRIVATE,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
+issue12,PUBLIC,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
+issue23,PUBLIC,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
+jenkins-repo,PUBLIC,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
+key-repo,PUBLIC,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
+maven-package,PUBLIC,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
+migrate,PUBLIC,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
+name1,PRIVATE,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
+new,PRIVATE,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
+new-repo-A,PUBLIC,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
+newrepo,PUBLIC,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
+pri,PRIVATE,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
+private,PRIVATE,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
+public,PUBLIC,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
+public-repo,PUBLIC,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
+public1,PUBLIC,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
+public2,PUBLIC,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
+push,PUBLIC,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
+repo27,PRIVATE,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization

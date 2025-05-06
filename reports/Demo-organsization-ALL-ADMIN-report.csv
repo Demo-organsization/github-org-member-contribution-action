@@ -13,6 +13,7 @@ maven-package,PUBLIC,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo
 migrate,PUBLIC,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
 name1,PRIVATE,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
 new,PRIVATE,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
+new-repo-A,PUBLIC,Charan-SV,Charan,,,charanv@devtools.in,ADMIN,MEMBER,FALSE,,2022-11-08,2025-04-23,Demo-organsization
 new-repo-A,PUBLIC,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
 newrepo,PUBLIC,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization
 pri,PRIVATE,sahana-un,,,,,ADMIN,ADMIN,FALSE,,2022-12-27,2025-05-06,Demo-organsization

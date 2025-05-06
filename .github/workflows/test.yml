@@ -15,3 +15,8 @@ jobs:
         uses: nicklegan/github-org-repo-collaborator-action@v2.0.1
         with:
           token: ${{ secrets.ORG_TOKEN }}
+          org: Demo-organsization          # <-- Replace with your organization name or pass via secret/input
+          affil: ALL                   # Options: ALL, DIRECT, OUTSIDE
+          permission: ADMIN           # Options: ADMIN, WRITE, READ
+          days: '90'                  # Optional: filter activity in the last N days
+          json: 'FALSE'               # If TRUE, outputs JSON instead of Markdown

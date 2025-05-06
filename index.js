@@ -2,16 +2,17 @@ const arraySort = require('array-sort')
 const core = require('@actions/core')
 const github = require('@actions/github')
 const stringify = require('csv-stringify/lib/sync')
-const {GitHub} = require('@actions/github/lib/utils')
-const {retry} = require('@octokit/plugin-retry')
-const {throttling} = require('@octokit/plugin-throttling')
+const { GitHub } = require('@actions/github/lib/utils')
+const { retry } = require('@octokit/plugin-retry')
+const { throttling } = require('@octokit/plugin-throttling')
+const fs = require('fs')
 
+// Enable throttling and retries
 const MyOctokit = GitHub.plugin(throttling, retry)
 const eventPayload = require(process.env.GITHUB_EVENT_PATH)
-const org = core.getInput('org', {required: false}) || eventPayload.organization.login
-const token = core.getInput('token', {required: true})
+const org = core.getInput('org', { required: false }) || eventPayload.organization.login
+const token = core.getInput('token', { required: true })
 
-// API throttling
 const octokit = new MyOctokit({
   auth: token,
   request: {
@@ -20,30 +21,27 @@ const octokit = new MyOctokit({
   },
   throttle: {
     onRateLimit: (retryAfter, options, octokit) => {
-      octokit.log.warn(`Request quota exhausted for request ${options.method} ${options.url}`)
-
+      octokit.log.warn(`Rate limit hit for request ${options.method} ${options.url}`)
       if (options.request.retryCount === 0) {
-        // only retries once
-        octokit.log.info(`Retrying after ${retryAfter} seconds!`)
+        octokit.log.info(`Retrying after ${retryAfter} seconds...`)
         return true
       }
     },
     onAbuseLimit: (retryAfter, options, octokit) => {
-      // does not retry, only logs a warning
-      oktokit.log.warn(`Abuse detected for request ${options.method} ${options.url}`)
+      octokit.log.warn(`Abuse limit detected for ${options.method} ${options.url}`)
     }
   }
 })
 
-// Query all org member contributions
+// Main contribution fetcher
 async function getMemberActivity(orgid, from, to, contribArray) {
   let paginationMember = null
-  const query = `query ($org: String! $orgid: ID $cursorID: String $from: DateTime, $to: DateTime) {
-    organization(login: $org ) {
+  const query = `query ($org: String!, $orgid: ID, $cursorID: String, $from: DateTime, $to: DateTime) {
+    organization(login: $org) {
       membersWithRole(first: 25, after: $cursorID) {
         nodes {
           login
-          contributionsCollection (organizationID: $orgid, from: $from, to: $to) {
+          contributionsCollection(organizationID: $orgid, from: $from, to: $to) {
             hasAnyContributions
             totalCommitContributions
             totalIssueContributions
@@ -62,12 +60,12 @@ async function getMemberActivity(orgid, from, to, contribArray) {
       }
     }
   }`
+
   try {
     let hasNextPageMember = false
-    let getMemberResult = null
 
     do {
-      getMemberResult = await octokit.graphql({
+      const getMemberResult = await octokit.graphql({
         query,
         org,
         orgid,
@@ -78,28 +76,37 @@ async function getMemberActivity(orgid, from, to, contribArray) {
 
       const membersObj = getMemberResult.organization.membersWithRole.nodes
       hasNextPageMember = getMemberResult.organization.membersWithRole.pageInfo.hasNextPage
+      paginationMember = hasNextPageMember ? getMemberResult.organization.membersWithRole.pageInfo.endCursor : null
 
       for (const member of membersObj) {
-        if (hasNextPageMember) {
-          paginationMember = getMemberResult.organization.membersWithRole.pageInfo.endCursor
-        } else {
-          paginationMember = null
-        }
+        const {
+          login,
+          contributionsCollection: {
+            hasAnyContributions,
+            totalCommitContributions,
+            totalIssueContributions,
+            totalPullRequestContributions,
+            totalPullRequestReviewContributions,
+            totalRepositoriesWithContributedIssues,
+            totalRepositoriesWithContributedCommits,
+            totalRepositoriesWithContributedPullRequests,
+            totalRepositoriesWithContributedPullRequestReviews
+          }
+        } = member
 
-        const userName = member.login
-        const activeContrib = member.contributionsCollection.hasAnyContributions
-        const commitContrib = member.contributionsCollection.totalCommitContributions
-        const issueContrib = member.contributionsCollection.totalIssueContributions
-        const prContrib = member.contributionsCollection.totalPullRequestContributions
-        const prreviewContrib = member.contributionsCollection.totalPullRequestReviewContributions
-        const repoIssueContrib = member.contributionsCollection.totalRepositoriesWithContributedIssues
-        const repoCommitContrib = member.contributionsCollection.totalRepositoriesWithContributedCommits
-        const repoPullRequestContrib = member.contributionsCollection.totalRepositoriesWithContributedPullRequests
-        const repoPullRequestReviewContrib = member.contributionsCollection.totalRepositoriesWithContributedPullRequestReviews
-
-        // Push all member contributions from query to array
-        contribArray.push({userName, activeContrib, commitContrib, issueContrib, prContrib, prreviewContrib, repoIssueContrib, repoCommitContrib, repoPullRequestContrib, repoPullRequestReviewContrib})
-        console.log(userName)
+        console.log(`${login}: hasContrib=${hasAnyContributions}, commits=${totalCommitContributions}`)
+        contribArray.push({
+          userName: login,
+          activeContrib: hasAnyContributions,
+          commitContrib: totalCommitContributions,
+          issueContrib: totalIssueContributions,
+          prContrib: totalPullRequestContributions,
+          prreviewContrib: totalPullRequestReviewContributions,
+          repoIssueContrib: totalRepositoriesWithContributedIssues,
+          repoCommitContrib: totalRepositoriesWithContributedCommits,
+          repoPullRequestContrib: totalRepositoriesWithContributedPullRequests,
+          repoPullRequestReviewContrib: totalRepositoriesWithContributedPullRequestReviews
+        })
       }
     } while (hasNextPageMember)
   } catch (error) {
@@ -109,56 +116,51 @@ async function getMemberActivity(orgid, from, to, contribArray) {
 
 ;(async () => {
   try {
-    // Find orgid for organization
-    const query = `query ($org: String!) {
-      organization(login: $org) {
-        id
-      }
-    }`
-    getOrgIdResult = await octokit.graphql({
-      query,
-      org
-    })
+    // Get org ID
+    const getOrgIdResult = await octokit.graphql(`query ($org: String!) {
+      organization(login: $org) { id }
+    }`, { org })
 
-    // Detect if input is day amount or historic interval and set date variables
-    const fromdate = core.getInput('fromdate', {required: false}) || ''
-    const todate = core.getInput('todate', {required: false}) || ''
     const orgid = getOrgIdResult.organization.id
+    console.log(`Organization ID: ${orgid}`)
 
-    let to
-    let from
-    let days
-    let columnDate
-    let fileDate
-    let logDate
+    // Get date range
+    const fromdate = core.getInput('fromdate', { required: false })
+    const todate = core.getInput('todate', { required: false })
+    let from, to, fileDate, logDate, columnDate
 
-    const regex = '([0-9]{4}-[0-9]{2}-[0-9]{2})'
-    const flags = 'i'
-    const re = new RegExp(regex, flags)
+    const isValidDate = (date) => /^\d{4}-\d{2}-\d{2}$/.test(date)
 
-    if (re.test(fromdate, todate) !== true) {
-      days = core.getInput('days', {required: false}) || '30'
+    if (isValidDate(fromdate) && isValidDate(todate)) {
+      from = new Date(fromdate).toISOString()
+      to = new Date(todate).toISOString()
+      fileDate = `${fromdate}-to-${todate}`
+      columnDate = logDate = `${fromdate} to ${todate}`
+    } else {
+      const days = parseInt(core.getInput('days', { required: false }) || '30', 10)
       to = new Date()
       from = new Date()
       from.setDate(to.getDate() - days)
       columnDate = `<${days} days`
       fileDate = `${days}-days`
       logDate = `${days} days`
-    } else {
-      to = new Date(todate).toISOString()
-      from = new Date(fromdate).toISOString()
-      days = `${from.substr(0, 10)} to ${to.substr(0, 10)}`
-      columnDate = days
-      fileDate = `${from.substr(0, 10)}-to-${to.substr(0, 10)}`
-      logDate = days
+      from = from.toISOString()
+      to = to.toISOString()
     }
 
-    // Take time, orgid parameters and init array to get all member contributions
+    console.log(`Generating report from ${from} to ${to}`)
+
+    // Fetch contributions
     const contribArray = []
-    console.log(`Retrieving ${logDate} of member contribution data for the ${org} organization:`)
     await getMemberActivity(orgid, from, to, contribArray)
 
-    // Set sorting settings and add header to array
+    if (contribArray.length === 0) {
+      console.log('⚠️ No contributions found for any members.')
+    } else {
+      console.log(`✅ Found contributions for ${contribArray.length} members`)
+    }
+
+    // CSV headers
     const columns = {
       userName: 'Member',
       activeContrib: `Has active contributions (${columnDate})`,
@@ -171,26 +173,24 @@ async function getMemberActivity(orgid, from, to, contribArray) {
       repoPullRequestContrib: `PR spread (${columnDate})`,
       repoPullRequestReviewContrib: `PR review spread (${columnDate})`
     }
-    const sortColumn = core.getInput('sort', {required: false}) || 'commitContrib'
-    const sortArray = arraySort(contribArray, sortColumn, {reverse: true})
-    sortArray.unshift(columns)
 
-    // Convert array to csv
-    const csv = stringify(sortArray, {
+    const sortColumn = core.getInput('sort', { required: false }) || 'commitContrib'
+    const sortedArray = arraySort(contribArray, sortColumn, { reverse: true })
+    sortedArray.unshift(columns)
+
+    const csv = stringify(sortedArray, {
       cast: {
-        boolean: function (value) {
-          return value ? 'TRUE' : 'FALSE'
-        }
+        boolean: value => value ? 'TRUE' : 'FALSE'
       }
     })
 
-    // Prepare path/filename, repo/org context and commit name/email variables
-    const reportPath = `reports/${org}-${new Date().toISOString().substring(0, 19) + 'Z'}-${fileDate}.csv`
-    const committerName = core.getInput('committer-name', {required: false}) || 'github-actions'
-    const committerEmail = core.getInput('committer-email', {required: false}) || 'github-actions@github.com'
-    const {owner, repo} = github.context.repo
+    // Prepare file name
+    const reportPath = `reports/${org}-${new Date().toISOString().substring(0, 19)}-${fileDate}.csv`
+    const committerName = core.getInput('committer-name', { required: false }) || 'github-actions'
+    const committerEmail = core.getInput('committer-email', { required: false }) || 'github-actions@github.com'
+    const { owner, repo } = github.context.repo
 
-    // Push csv to repo
+    // Push CSV to repo
     const opts = {
       owner,
       repo,
@@ -203,10 +203,10 @@ async function getMemberActivity(orgid, from, to, contribArray) {
       }
     }
 
-    console.log(`Pushing final CSV report to repository path: ${reportPath}`)
-
+    console.log(`📄 Writing report to ${reportPath}`)
     await octokit.rest.repos.createOrUpdateFileContents(opts)
+    console.log('✅ Report successfully pushed to the repository.')
   } catch (error) {
-    core.setFailed(error.message)
+    core.setFailed(error.stack || error.message)
   }
 })()
